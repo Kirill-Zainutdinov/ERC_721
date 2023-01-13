@@ -62,8 +62,8 @@ describe("Testing ERC721",  function () {
     })
 
     describe("Mint", function () {
-        describe("Require", function () {
-            it("Check that only the contract owner can do token emission", async function () {
+        describe("Require check that", function () {
+            it("Only the contract owner can do token emission", async function () {
                 const { erc721, hacker, } = await loadFixture(deploy)
 
                 await expect(
@@ -175,8 +175,8 @@ describe("Testing ERC721",  function () {
     })
     
     describe("Approve", function () {
-        describe("Requires", function () {
-            it("Check that you can't approve a token if you don't own it", async function () {
+        describe("Requires check that", function () {
+            it("Can't approve a token if you don't own it", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -189,7 +189,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: approve caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for this token", async function () {
+            it("Can't approve a token if you don't operator for this token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -202,7 +202,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: approve caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for all token", async function () {
+            it("Can't approve a token if you don't operator for all token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -252,8 +252,49 @@ describe("Testing ERC721",  function () {
 
 
     describe("TransferFrom", function () {
-        describe("Requires", function () {
-            it("Check that you can't approve a token if you don't own it", async function () {
+        describe("Requires check that", function () {
+            it("Can't transfer a token with a non-existent id", async function () {
+                const { erc721, account, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(account.address)
+                await tx.wait()
+
+                const tokenId = await erc721.getTokenId()
+
+                await expect(erc721.connect(hacker).transferFrom(account.address, hacker.address, tokenId.add(1)))
+                .to.be.revertedWith("ERC721: Token with this id does not exist")
+                await expect(erc721.connect(hacker).transferFrom(account.address, hacker.address, 0))
+                .to.be.revertedWith("ERC721: Token with this id does not exist")
+            })
+
+            it("Can't transfer a token if from does not own a token", async function () {
+                const { erc721, owner, account, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(owner.address)
+                await tx.wait()
+
+                const tokenId = await erc721.getTokenId()
+
+                expect(hacker).to.not.equal(await erc721.ownerOf(tokenId))
+                await expect(erc721.transferFrom(hacker.address, account.address, tokenId))
+                .to.be.revertedWith("ERC721: transfer from incorrect owner")
+            })
+
+            it("Can't transfer a token to zero address", async function () {
+                const { erc721, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(hacker.address)
+                await tx.wait()
+
+                const tokenId = await erc721.getTokenId()
+                const zeroAddress = "0x0000000000000000000000000000000000000000"
+
+                expect(hacker).to.not.equal(await erc721.ownerOf(tokenId))
+                await expect(erc721.connect(hacker).transferFrom(hacker.address, zeroAddress, tokenId))
+                .to.be.revertedWith("ERC721: transfer to the zero address")
+            })
+
+            it("Can't transfer a token if caller don't own it", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -266,7 +307,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for this token", async function () {
+            it("Can't transfer a token if caller don't operator for this token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -279,7 +320,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for all token", async function () {
+            it("Can't transfer a token if caller don't operator for all token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -414,20 +455,55 @@ describe("Testing ERC721",  function () {
     })
 
     describe("safeTransferFrom(address, address, uint256)", function () {
-        describe("Requires", function () {
-            it("Сheck that you cannot send a token to a contract that does not support onERC721Received", async function(){
-                const { erc721, notErc721Received, owner, account } = await loadFixture(deploy)
+        describe("Requires check that", function () {
+            it("Can't transfer a token with a non-existent id", async function () {
+                const { erc721, account, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(account.address)
+                await tx.wait()
+
+                const tokenId = await erc721.getTokenId()
+
+                await expect(
+                    erc721.connect(hacker)["safeTransferFrom(address,address,uint256)"](account.address, hacker.address, tokenId.add(1))
+                )
+                .to.be.revertedWith("ERC721: Token with this id does not exist")
+                await expect(
+                    erc721.connect(hacker)["safeTransferFrom(address,address,uint256)"](account.address, hacker.address, 0)
+                )
+                .to.be.revertedWith("ERC721: Token with this id does not exist")
+            })
+
+            it("Can't transfer a token if from does not own a token", async function () {
+                const { erc721, owner, account, hacker } = await loadFixture(deploy)
 
                 let tx = await erc721.mint(owner.address)
                 await tx.wait()
 
                 const tokenId = await erc721.getTokenId()
 
-                await expect(erc721["safeTransferFrom(address,address,uint256)"](owner.address, notErc721Received.address, tokenId))
-                .to.be.revertedWith("ERC721: transfer to non ERC721Receiver implementer")
+                expect(hacker).to.not.equal(await erc721.ownerOf(tokenId))
+                await expect(erc721["safeTransferFrom(address,address,uint256)"](hacker.address, account.address, tokenId))
+                .to.be.revertedWith("ERC721: transfer from incorrect owner")
             })
 
-            it("Check that you can't approve a token if you don't own it", async function () {
+            it("Can't transfer a token to zero address", async function () {
+                const { erc721, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(hacker.address)
+                await tx.wait()
+
+                const tokenId = await erc721.getTokenId()
+                const zeroAddress = "0x0000000000000000000000000000000000000000"
+
+                expect(hacker).to.not.equal(await erc721.ownerOf(tokenId))
+                await expect(
+                    erc721.connect(hacker)["safeTransferFrom(address,address,uint256)"](hacker.address, zeroAddress, tokenId)
+                )
+                .to.be.revertedWith("ERC721: transfer to the zero address")
+            })
+
+            it("Can't transfer a token if caller don't own it", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -442,7 +518,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for this token", async function () {
+            it("Can't transfer a token if caller don't operator for this token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -457,7 +533,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for all token", async function () {
+            it("Can't transfer a token if caller don't operator for all token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -470,6 +546,18 @@ describe("Testing ERC721",  function () {
                     erc721.connect(hacker)["safeTransferFrom(address,address,uint256)"](account.address, hacker.address, tokenId)
                 )
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
+            })
+
+            it("Can't transfer a token to a contract that does not support onERC721Received", async function(){
+                const { erc721, notErc721Received, owner, account } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(owner.address)
+                await tx.wait()
+
+                const tokenId = await erc721.getTokenId()
+
+                await expect(erc721["safeTransferFrom(address,address,uint256)"](owner.address, notErc721Received.address, tokenId))
+                .to.be.revertedWith("ERC721: transfer to non ERC721Receiver implementer")
             })
         })
 
@@ -700,9 +788,28 @@ describe("Testing ERC721",  function () {
     })
 
     describe("safeTransferFrom(address, address, uint256, bytes)", function () {
-        describe("Requires", function () {
-            it("Сheck that you cannot send a token to a contract that does not support onERC721Received", async function(){
-                const { erc721, notErc721Received, owner, account } = await loadFixture(deploy)
+        describe("Requires check that", function () {
+            it("Can't transfer a token with a non-existent id", async function () {
+                const { erc721, account, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(account.address)
+                await tx.wait()
+
+                const data = ethers.utils.randomBytes(1)
+                const tokenId = await erc721.getTokenId()
+
+                await expect(
+                    erc721.connect(hacker)["safeTransferFrom(address,address,uint256,bytes)"](account.address, hacker.address, tokenId.add(1), data)
+                )
+                .to.be.revertedWith("ERC721: Token with this id does not exist")
+                await expect(
+                    erc721.connect(hacker)["safeTransferFrom(address,address,uint256,bytes)"](account.address, hacker.address, 0, data)
+                )
+                .to.be.revertedWith("ERC721: Token with this id does not exist")
+            })
+
+            it("Can't transfer a token if from does not own a token", async function () {
+                const { erc721, owner, account, hacker } = await loadFixture(deploy)
 
                 let tx = await erc721.mint(owner.address)
                 await tx.wait()
@@ -710,13 +817,29 @@ describe("Testing ERC721",  function () {
                 const data = ethers.utils.randomBytes(1)
                 const tokenId = await erc721.getTokenId()
 
-                await expect(
-                    erc721["safeTransferFrom(address,address,uint256,bytes)"](owner.address, notErc721Received.address, tokenId, data)
-                )
-                .to.be.revertedWith("ERC721: transfer to non ERC721Receiver implementer")
+                expect(hacker).to.not.equal(await erc721.ownerOf(tokenId))
+                await expect(erc721["safeTransferFrom(address,address,uint256,bytes)"](hacker.address, account.address, tokenId, data))
+                .to.be.revertedWith("ERC721: transfer from incorrect owner")
             })
 
-            it("Check that you can't approve a token if you don't own it", async function () {
+            it("Can't transfer a token to zero address", async function () {
+                const { erc721, hacker } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(hacker.address)
+                await tx.wait()
+
+                const data = ethers.utils.randomBytes(1)
+                const tokenId = await erc721.getTokenId()
+                const zeroAddress = "0x0000000000000000000000000000000000000000"
+
+                expect(hacker).to.not.equal(await erc721.ownerOf(tokenId))
+                await expect(
+                    erc721.connect(hacker)["safeTransferFrom(address,address,uint256,bytes)"](hacker.address, zeroAddress, tokenId, data)
+                )
+                .to.be.revertedWith("ERC721: transfer to the zero address")
+            })
+
+            it("Can't transfer a token if you don't own it", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -732,7 +855,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for this token", async function () {
+            it("Can't transfer a token if you don't operator for this token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -748,7 +871,7 @@ describe("Testing ERC721",  function () {
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
             })
 
-            it("Check that you can't approve a token if you don't operator for all token", async function () {
+            it("Can't transfer a token if you don't operator for all token", async function () {
                 const { erc721, account, hacker } = await loadFixture(deploy)
                 
                 let tx = await erc721.mint(account.address)
@@ -762,6 +885,21 @@ describe("Testing ERC721",  function () {
                     erc721.connect(hacker)["safeTransferFrom(address,address,uint256,bytes)"](account.address, hacker.address, tokenId, data)
                 )
                 .to.be.revertedWith("ERC721: transfer caller is not owner or approved operator")
+            })
+
+            it("Can't transfer a token to a contract that does not support onERC721Received", async function(){
+                const { erc721, notErc721Received, owner, account } = await loadFixture(deploy)
+
+                let tx = await erc721.mint(owner.address)
+                await tx.wait()
+
+                const data = ethers.utils.randomBytes(1)
+                const tokenId = await erc721.getTokenId()
+
+                await expect(
+                    erc721["safeTransferFrom(address,address,uint256,bytes)"](owner.address, notErc721Received.address, tokenId, data)
+                )
+                .to.be.revertedWith("ERC721: transfer to non ERC721Receiver implementer")
             })
         })
 

@@ -98,7 +98,8 @@ contract ERC721 is IERC721, IERC721Metadata, ERC165{
         require(msg.sender == tokenOwner ||
                 msg.sender == tokenApprovals[tokenId] ||
                 operatorApprovals[tokenOwner][msg.sender],
-        "ERC721: approve caller is not owner or approved operator");
+                "ERC721: approve caller is not owner or approved operator"
+        );
         tokenApprovals[tokenId] = spender;
         emit Approval(tokenOwner, spender, tokenId);
     }
@@ -109,6 +110,7 @@ contract ERC721 is IERC721, IERC721Metadata, ERC165{
     }
 
     function transferFrom(address from, address to, uint256 tokenId) external {
+        _checkBeforeTransfer(msg.sender, from, to, tokenId);
         _transfer(from, to, tokenId);
     }
 
@@ -122,17 +124,9 @@ contract ERC721 is IERC721, IERC721Metadata, ERC165{
         uint256 tokenId, 
         bytes memory data
     ) public {
-        require(_checkOnERC721Received(from, to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer");
+        _checkBeforeTransfer(msg.sender, from, to, tokenId);
         _transfer(from, to, tokenId);
-    }
-
-    function _transfer(address from, address to, uint256 tokenId) internal {
-        require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner or approved operator");
-        approve(address(0), _tokenId);
-        balances[from] -= 1;
-        balances[to] += 1;
-        owners[tokenId] = to;
-        emit Transfer(from, to, tokenId);
+        require(_checkOnERC721Received(from, to, tokenId, data), "ERC721: transfer to non ERC721Receiver implementer");
     }
 
     function _checkOnERC721Received(
@@ -152,11 +146,23 @@ contract ERC721 is IERC721, IERC721Metadata, ERC165{
         }
     }
 
-    function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
+    function _transfer(address from, address to, uint256 tokenId) internal {
+        tokenApprovals[tokenId] = address(0);
+        balances[from] -= 1;
+        balances[to] += 1;
+        owners[tokenId] = to;
+        emit Transfer(from, to, tokenId);
+    }
+
+    function _checkBeforeTransfer(address spender, address from, address to, uint256 tokenId) internal view {
+        require(tokenId <= _tokenId && tokenId != 0, "ERC721: Token with this id does not exist");
         address tokenOwner = owners[tokenId];
-        return (spender == tokenOwner ||
+        require(from == tokenOwner, "ERC721: transfer from incorrect owner");
+        require(to != address(0), "ERC721: transfer to the zero address");
+        require(spender == tokenOwner ||
                 operatorApprovals[tokenOwner][spender] ||
-                tokenApprovals[tokenId] == spender
+                tokenApprovals[tokenId] == spender,
+                "ERC721: transfer caller is not owner or approved operator"
         );
     }
 
