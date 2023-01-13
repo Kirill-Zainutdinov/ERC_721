@@ -25,15 +25,6 @@ describe("Testing ERC721",  function () {
         return { erc721, erc721Received, notErc721Received, name, symbol, baseURI, owner, account, operator, hacker }
     }
 
-    async function deployAndMint() {
-        const { erc721, name, symbol, baseURI, owner, account, hacker } = await deploy()
-
-        const tx = await erc721.mint(account.address)
-        await tx.wait()
-    
-        return { erc721, name, symbol, baseURI, owner, account, hacker }
-    }
-
     describe("Deployment", function () {
 
         it("Check that the token _name is set correctly", async function () {
